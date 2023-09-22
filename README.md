@@ -26,6 +26,7 @@ Finally, the scripts allow to download each Dall-E generated image, and assmeble
 	PRES_PENALTY=2.0
 	```
 	- You can, of course, alter the parameters where it makes sense. Please refer to the OpenAI DOCs for more details about what each of these settings do
+3. You need the Python Libraries specified in the `requirements.txt` installed on your machine, and of course, Python (at least 3.11)
 
 ## Usage
 
