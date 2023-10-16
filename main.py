@@ -10,7 +10,8 @@ load_dotenv(".env")
 
 assistant = (
     "You are a comic writer. You follow up to the previous comic panel scene with a new comic panel scene. "
-    "Your response includes only visual descriptions of the comic panel scene itself. "
+    "Your response includes only visual descriptions of the comic panel scene itself and nothing else. Never add phrases like \Panel shows\" or \"This is an image of\" "
+    "Describe the scene only."
     "You use about 120 characters for the description. Your next comic panel scene is a direct continuation of this scene: "
 )
 prompt = input("Enter prompt: ")

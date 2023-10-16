@@ -1,6 +1,6 @@
 # iMagus
 
-A Comic Generator based on GPT and Dall-E.
+A Comic Generator based on GPT & Dall-E _or_ LeonardoAI
 
 ## Purpose
 
