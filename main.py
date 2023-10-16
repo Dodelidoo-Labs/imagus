@@ -19,6 +19,21 @@ artstyle = input(
 )
 panel_nu = int(input("Enter amount of Panels to generate: "))
 
+print("Choose an Image Engine:")
+print("1. Dalle-2")
+print("2. Leonardo AI")
+choice = input()
+
+if choice == "1":
+    engine = "d3"
+elif choice == "2":
+    engine = "leo"
+    l_model_id = input("Model ID: ")
+    
+else:
+    print("Invalid choice!")
+    exit()
+
 base_url = os.getenv("BASE_URL")
 model = os.getenv("MODEL")
 max_tokens = int(os.getenv("MAX_TOKENS"))
@@ -66,7 +81,7 @@ def make_leo_image(result):
     }
     data = {
         "height": 512,
-        "modelId": "ac614f96-1082-45bf-be9d-757f2d31c174",
+        "modelId": l_model_id,
         "prompt": result + " " + artstyle,
         "width": 912,
 		"alchemy": False,
@@ -113,8 +128,10 @@ def get_legacy_response(prompt, n, panel_n, panel_nu):
         print(end_message)
         sys.exit()
     if n == 0:
-        make_leo_image(prompt)
-		# make_image(prompt)
+        if engine == 'leo':
+            make_leo_image(prompt)
+        if engine == 'd3':
+            make_image(prompt)
     prompt = assistant + prompt
     try:
         response = openai.Completion.create(
@@ -131,7 +148,10 @@ def get_legacy_response(prompt, n, panel_n, panel_nu):
             completion_tokens = response['usage']['completion_tokens']
         if not completion_tokens or completion_tokens == 0:
             get_legacy_response(prompt, n, panel_n, panel_nu)
-        make_leo_image(result)
+        if engine == 'leo':
+            make_leo_image(result)
+        if engine == 'd3':
+            make_image(result)
         n += 1
         panel_n += 1
         get_legacy_response(result, n, panel_n, panel_nu)
@@ -143,6 +163,7 @@ def get_legacy_response(prompt, n, panel_n, panel_nu):
 
 
 def recur(panel_n, panel_nu):
+    print("Generating Comic Panels. Please wait..")
     get_legacy_response(prompt, 0, panel_n, panel_nu)
 
 

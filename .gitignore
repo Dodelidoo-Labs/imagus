@@ -398,3 +398,5 @@ FodyWeavers.xsd
 *.sln.iml
 .env
 .DS_Store
+comic.pdf
+logs.json
