@@ -66,5 +66,8 @@ Finally, the scripts allow to download each Dall-E generated image, and assmeble
 
 ## Plans and future
 - It is planned to add a GUI to the whole process, however this is not yet done. Contributions welcome!
-- It is planned to make the images download asynchroneous, to speed it up a bit.
+- ~~It is planned to make the images download asynchroneous, to speed it up a bit.~~ ✅
 - It is planned to add support for newer GPT models, and once it is out, Dall-E 3
+- It is planned to support other AI's:
+    - ~~Leonardo AI~~ ✅
+	- Others?
