@@ -70,7 +70,7 @@ for i in range(0, len(data), 4):
         if i + j < len(data):
             item = data[i + j]
             img = Image(f"imgs/{(i + j)}-image.png", img_width, img_height)
-            para = Paragraph(item["content"], comicTextStyle)
+            para = Paragraph(item["description"], comicTextStyle)
             
             if j % 2 == 0 and j != 0:
                 table_data.append(row_images)
@@ -100,6 +100,3 @@ table.setStyle(TableStyle([
 
 story.append(table)
 doc.build(story, onFirstPage=on_first_page, onLaterPages=on_later_pages)
-
-
-
