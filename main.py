@@ -1,8 +1,8 @@
 import os
-import sys
 import json
 from dotenv import load_dotenv
 from openai import OpenAI
+import base64
 
 # Load environment variables
 load_dotenv(".env")
@@ -16,7 +16,8 @@ max_tokens = int(os.getenv("MAX_TOKENS", "200"))
 temp = float(os.getenv("TEMPERATURE", "0.7"))
 freq = float(os.getenv("FREQ_PENALTY", "0.5"))
 pres = float(os.getenv("PRES_PENALTY", "0.7"))
-
+save_folder = "imgs"
+n = 0
 jsonpath = "logs.json"
 
 # Prompt framework
@@ -29,14 +30,20 @@ assistant = (
     "Your goal is to build intrigue, atmosphere, and momentum — one panel at a time."
 )
 comic_text_prompt = (
-    "You are writing comic book panel text for a published comic. "
-    "The art is already drawn, and now you're adding the words.\n\n"
+    "You are writing comic book panel text for a published comic. The art is already drawn, and now you're adding the words.\n\n"
     "Write only what would appear as narration, dialogue, or sound effects in the panel — NOT a description of the art.\n"
-    "Only include text that feels natural in a printed comic. It's okay if the panel has no words.\n\n"
-    "Respond with just the comic panel narration. Do not explain anything. Do not add extra information like \"NARRATION: \" or similar. Respond _with_ the narration only."
+    "Respond ONLY in valid JSON format with the following structure:\n\n"
+    "{\n"
+    "  \"narration\": [\"Optional narration text, if any.\"],\n"
+    "  \"dialogue\": [\n"
+    "    {\"character\": \"Name\", \"text\": \"Spoken words here.\"}\n"
+    "  ],\n"
+    "  \"sfx\": [\"SOUND EFFECT\"]\n"
+    "}\n\n"
+    "Omit fields that are empty. Do not explain. Do not add anything outside of the JSON. Use natural comic dialogue style."
 )
 # --- User Input ---
-prompt = input("Enter prompt: ")
+seed_idea = input("Enter comic idea or theme: ")
 artstyle = input("Enter Artstyle (e.g., 'The image's style should follow the visual language of Japanese ukiyo-e prints with airy lines, delicate shading, and a gentle natural palette. This should be combined with the structured layout and muted tones characteristic of early 20th-century Eastern European propaganda lithographs. The background should be composed of watercolor-style rolling hills and trees meticulously crafted with precise ink linework. Overlay the entire image with a paper grain texture. Ensure the incorporation of cinematic lighting, balancing the scene elements, and capturing strong narrative posture.'): ")
 panel_nu = int(input("Enter amount of Panels to generate: "))
 
@@ -52,6 +59,33 @@ def appendto(file, data):
     with open(file, 'w') as f:
         json.dump(existing_data, f, indent=2)
 
+def seed_to_first_panel_prompt(seed_idea):
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are starting a new comic book based on the following idea provided by a human.\n\n"
+                        "Your job is to write the **first panel's visual scene description** — rich in detail and physical elements, "
+                        "not abstract themes. Imagine what the camera sees. Be grounded, cinematic, and intriguing.\n\n"
+                        "Do NOT explain or summarize the idea. Just write the first panel as if it's part of a real comic, "
+                        "establishing the setting, mood, and character(s)."
+                    )
+                },
+                {"role": "user", "content": f"Comic idea: {seed_idea}"}
+            ],
+            temperature=temp,
+            max_tokens=max_tokens,
+            frequency_penalty=freq,
+            presence_penalty=pres
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error generating first panel from seed: {e}")
+        return seed_idea  # fallback to user input
+    
 def generate_comic_text_from_image_description(image_prompt):
     try:
         chat_response = client.chat.completions.create(
@@ -63,33 +97,41 @@ def generate_comic_text_from_image_description(image_prompt):
             temperature=temp,
             max_tokens=100,
             frequency_penalty=0.4,
-            presence_penalty=0.6
+            presence_penalty=0.6,
+            response_format={"type": "json_object"}
         )
-        return chat_response.choices[0].message.content.strip()
+        return json.loads( chat_response.choices[0].message.content )
     except Exception as e:
         print(f"Error generating comic panel text: {e}")
         return ""
 
 def generate_image_with_dalle3(prompt):
-    print("Generating image with DALL·E 3...")
+    global n
+    print("Generating image with GPT Image 1...")
     response = client.images.generate(
-        model="dall-e-3",
+        model="gpt-image-1",
         prompt=f"Generate an image featuring {prompt}. {artstyle}.",
         n=1,
-        quality="standard",
-        size="1024x1024",
+        quality="auto",
+        size="auto",
     )
-    image_url = response.data[0].url
-    revised_prompt = response.data[0].revised_prompt
-    print(f"Image generated: {image_url} with prompt: {revised_prompt}")
-    return image_url
+    image_b64 = response.data[0].b64_json
+    #revised_prompt = response.data[0].revised_prompt
+    image_data = base64.b64decode(image_b64)
+    file_name = f"{n}-image.png"
+    file_path = os.path.join(save_folder, file_name)
+    with open(file_path, 'wb') as f:
+        f.write(image_data)
+        print(f"Image saved: {file_path} with prompt: {prompt}")
+    n += 1
+    return file_path
 
 def generate_panel_and_image(prompt, panel_index):
     try:
         print(f"Generating panel {panel_index + 1}...")
 
         # Generate image and get URL
-        image_url = generate_image_with_dalle3(prompt)
+        file_path = generate_image_with_dalle3(prompt)
 
         # Generate narration
         comic_text = generate_comic_text_from_image_description(prompt)
@@ -97,13 +139,10 @@ def generate_panel_and_image(prompt, panel_index):
         # Append final clean JSON
         data = {
             "content": prompt,
-            "url": image_url,
+            "url": file_path,
             "description": comic_text
         }
         appendto(jsonpath, data)
-
-        if panel_index == 0:
-            return prompt  # Reuse prompt for next panel
 
         # Generate next scene prompt
         chat_response = client.chat.completions.create(
@@ -128,6 +167,7 @@ def generate_panel_and_image(prompt, panel_index):
 # --- Main Loop ---
 print("Generating Comic Panels. Please wait...")
 
+prompt = seed_to_first_panel_prompt(seed_idea)
 for panel in range(panel_nu):
     result = generate_panel_and_image(prompt, panel)
     if not result:

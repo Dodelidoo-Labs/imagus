@@ -63,6 +63,19 @@ def on_page(canvas, doc, is_first_page):
 
     canvas.restoreState()
 
+def format_description(desc):
+    parts = []
+    if 'narration' in desc:
+        for line in desc['narration']:
+            parts.append(f"<i>{line}</i>")
+    if 'dialogue' in desc:
+        for d in desc['dialogue']:
+            parts.append(f"<b>{d['character']}:</b> {d['text']}")
+    if 'sfx' in desc:
+        for s in desc['sfx']:
+            parts.append(f"<font color='gray'>{s}</font>")
+    return '<br/>'.join(parts)
+
 for i in range(0, len(data), 4):
     row_images = []
     row_texts = []
@@ -70,7 +83,8 @@ for i in range(0, len(data), 4):
         if i + j < len(data):
             item = data[i + j]
             img = Image(f"imgs/{(i + j)}-image.png", img_width, img_height)
-            para = Paragraph(item["description"], comicTextStyle)
+            para_text = format_description(item["description"])
+            para = Paragraph(para_text, comicTextStyle)
             
             if j % 2 == 0 and j != 0:
                 table_data.append(row_images)
